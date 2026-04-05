@@ -1,1 +1,1421 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Schedule Manager</title>
+<style>
+:root {
+  --primary: #6C63FF;
+  --primary-light: #8B85FF;
+  --primary-dark: #4F46E5;
+  --accent: #FF6B9D;
+  --bg: #F8F9FE;
+  --card: #FFFFFF;
+  --text: #1A1A2E;
+  --text-sub: #6B7280;
+  --border: #E5E7EB;
+  --success: #10B981;
+  --warning: #F59E0B;
+  --danger: #EF4444;
+  --type-meet: #FF6B9D;
+  --type-tea: #10B981;
+  --type-dinner: #F59E0B;
+  --type-adult: #8B5CF6;
+  --type-meet-adult: #EC4899;
+  --shadow: 0 2px 12px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 30px rgba(0,0,0,0.12);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --nav-height: 64px;
+  --header-height: 56px;
+}
 
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-tap-highlight-color: transparent;
+  position: relative;
+}
+
+/* Header */
+.header {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: var(--header-height);
+  background: var(--primary);
+  color: #fff;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(108,99,255,0.3);
+}
+.header h1 { font-size: 18px; font-weight: 700; }
+.header-btn {
+  background: rgba(255,255,255,0.2);
+  border: none; color: #fff;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 18px;
+}
+.header-actions { display: flex; gap: 8px; }
+
+/* Main content */
+.main {
+  position: fixed;
+  top: var(--header-height);
+  bottom: var(--nav-height);
+  left: 0; right: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Bottom Nav */
+.nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  height: var(--nav-height);
+  background: var(--card);
+  display: flex;
+  border-top: 1px solid var(--border);
+  z-index: 100;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.nav-item {
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 2px;
+  cursor: pointer; border: none; background: none;
+  color: var(--text-sub);
+  font-size: 10px; font-weight: 500;
+  transition: color 0.2s;
+}
+.nav-item.active { color: var(--primary); }
+.nav-item svg { width: 24px; height: 24px; }
+
+/* Page transitions */
+.page { display: none; padding: 16px; padding-bottom: 24px; }
+.page.active { display: block; }
+
+/* Calendar */
+.cal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 0; margin-bottom: 8px;
+}
+.cal-header h2 { font-size: 20px; font-weight: 700; }
+.cal-nav { display: flex; gap: 4px; }
+.cal-nav button {
+  width: 36px; height: 36px;
+  border-radius: 50%; border: 1px solid var(--border);
+  background: var(--card); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; color: var(--text);
+}
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px; margin-bottom: 16px;
+}
+.cal-dow {
+  text-align: center; font-size: 11px;
+  color: var(--text-sub); padding: 8px 0;
+  font-weight: 600;
+}
+.cal-day {
+  aspect-ratio: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  border-radius: var(--radius-sm);
+  cursor: pointer; font-size: 14px;
+  position: relative; gap: 2px;
+  transition: background 0.2s;
+}
+.cal-day:hover { background: rgba(108,99,255,0.05); }
+.cal-day.other { color: #ccc; }
+.cal-day.today { background: rgba(108,99,255,0.1); font-weight: 700; color: var(--primary); }
+.cal-day.selected { background: var(--primary); color: #fff !important; font-weight: 700; }
+.cal-day.selected .cal-dots span { background: #fff !important; }
+.cal-dots { display: flex; gap: 2px; height: 6px; }
+.cal-dots span { width: 5px; height: 5px; border-radius: 50%; }
+
+/* Day schedule */
+.day-label {
+  font-size: 14px; font-weight: 600;
+  color: var(--text-sub); margin-bottom: 12px;
+  padding-left: 4px;
+}
+.appt-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  box-shadow: var(--shadow);
+  display: flex; align-items: center; gap: 12px;
+  cursor: pointer;
+  transition: transform 0.15s;
+  border-left: 4px solid var(--primary);
+}
+.appt-card:active { transform: scale(0.98); }
+.appt-time { font-size: 13px; color: var(--text-sub); font-weight: 600; min-width: 48px; }
+.appt-info { flex: 1; }
+.appt-name { font-size: 15px; font-weight: 600; }
+.appt-type {
+  display: inline-block; font-size: 11px; font-weight: 600;
+  padding: 2px 8px; border-radius: 20px; margin-top: 4px;
+  color: #fff;
+}
+.appt-amount { font-size: 14px; font-weight: 700; color: var(--primary); }
+.appt-empty {
+  text-align: center; padding: 32px;
+  color: var(--text-sub); font-size: 14px;
+}
+
+/* Girls list */
+.girl-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 10px;
+  box-shadow: var(--shadow);
+  display: flex; align-items: center; gap: 14px;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.girl-card:active { transform: scale(0.98); }
+.girl-avatar {
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; font-weight: 700; color: #fff;
+  flex-shrink: 0;
+}
+.girl-info { flex: 1; }
+.girl-name { font-size: 16px; font-weight: 600; }
+.girl-sub { font-size: 12px; color: var(--text-sub); margin-top: 2px; }
+.girl-status {
+  font-size: 11px; padding: 3px 10px;
+  border-radius: 20px; font-weight: 600;
+}
+
+/* Profile page */
+.profile-header {
+  text-align: center; padding: 24px 16px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  border-radius: var(--radius);
+  margin-bottom: 16px; color: #fff;
+}
+.profile-avatar {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; font-weight: 700;
+  margin: 0 auto 12px; border: 3px solid rgba(255,255,255,0.3);
+  color: #fff;
+}
+.profile-name { font-size: 22px; font-weight: 700; }
+.profile-section {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow);
+}
+.profile-section h3 {
+  font-size: 14px; font-weight: 700;
+  color: var(--primary); margin-bottom: 12px;
+  display: flex; align-items: center; gap: 6px;
+}
+.profile-row {
+  display: flex; justify-content: space-between;
+  align-items: center; padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+.profile-row:last-child { border-bottom: none; }
+.profile-row .label { color: var(--text-sub); }
+.profile-row .value { font-weight: 600; }
+.allowance-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.allowance-item {
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  text-align: center;
+}
+.allowance-item .type { font-size: 11px; font-weight: 600; margin-bottom: 4px; }
+.allowance-item .amount { font-size: 16px; font-weight: 700; color: var(--primary); }
+
+/* Summary page */
+.summary-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+.summary-total { font-size: 32px; font-weight: 800; color: var(--primary); }
+.summary-label { font-size: 13px; color: var(--text-sub); margin-top: 4px; }
+.summary-breakdown {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 10px; margin-top: 16px;
+}
+.summary-item {
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+}
+.summary-item .count { font-size: 22px; font-weight: 700; }
+.summary-item .label { font-size: 11px; color: var(--text-sub); }
+
+/* Modal */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 200;
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--card);
+  border-radius: 24px 24px 0 0;
+  width: 100%;
+  max-width: 480px;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 24px 20px 40px;
+  animation: slideUp 0.3s ease;
+}
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.modal-handle {
+  width: 36px; height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin: 0 auto 16px;
+}
+.modal h2 { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+.form-group { margin-bottom: 16px; }
+.form-group label {
+  display: block; font-size: 13px;
+  font-weight: 600; color: var(--text-sub);
+  margin-bottom: 6px;
+}
+.form-input {
+  width: 100%; padding: 12px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  background: var(--bg);
+  outline: none;
+  transition: border-color 0.2s;
+  font-family: inherit;
+}
+.form-input:focus { border-color: var(--primary); }
+select.form-input { -webkit-appearance: none; appearance: none; }
+textarea.form-input { resize: vertical; min-height: 80px; }
+.type-select {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.type-option {
+  padding: 10px; border-radius: var(--radius-sm);
+  border: 2px solid var(--border);
+  text-align: center; cursor: pointer;
+  font-size: 13px; font-weight: 600;
+  transition: all 0.2s;
+}
+.type-option.selected { border-color: var(--primary); background: rgba(108,99,255,0.08); color: var(--primary); }
+
+.btn {
+  width: 100%; padding: 14px;
+  border: none; border-radius: var(--radius);
+  font-size: 15px; font-weight: 700;
+  cursor: pointer; transition: all 0.2s;
+}
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:active { background: var(--primary-dark); }
+.btn-danger { background: var(--danger); color: #fff; margin-top: 8px; }
+.btn-secondary { background: var(--bg); color: var(--text); margin-top: 8px; }
+.btn-row { display: flex; gap: 8px; margin-top: 8px; }
+.btn-row .btn { flex: 1; }
+
+/* FAB */
+.fab {
+  position: fixed;
+  bottom: calc(var(--nav-height) + 16px);
+  right: 16px;
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  box-shadow: 0 4px 16px rgba(108,99,255,0.4);
+  font-size: 28px;
+  cursor: pointer;
+  z-index: 50;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 0.2s;
+}
+.fab:active { transform: scale(0.9); }
+
+/* Status badges */
+.status-active { background: #D1FAE5; color: #065F46; }
+.status-paused { background: #FEF3C7; color: #92400E; }
+.status-ended { background: #FEE2E2; color: #991B1B; }
+
+/* Sync indicator */
+.sync-bar {
+  position: fixed; top: var(--header-height);
+  left: 0; right: 0;
+  background: var(--warning);
+  color: #fff;
+  text-align: center;
+  font-size: 12px; font-weight: 600;
+  padding: 4px;
+  z-index: 99;
+  display: none;
+}
+.sync-bar.show { display: block; }
+
+/* Settings */
+.setting-item {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 10px;
+  box-shadow: var(--shadow);
+}
+.setting-item h3 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.setting-item p { font-size: 12px; color: var(--text-sub); margin-bottom: 10px; }
+.setting-item .form-input { margin-bottom: 8px; }
+.setting-btn {
+  padding: 8px 16px;
+  border: none; border-radius: 8px;
+  font-size: 13px; font-weight: 600;
+  cursor: pointer;
+}
+.tag { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; margin: 2px; }
+
+/* Custom field editor */
+.custom-field-row {
+  display: flex; gap: 8px; align-items: center;
+  margin-bottom: 8px;
+}
+.custom-field-row input { flex: 1; }
+.custom-field-row button {
+  width: 32px; height: 32px;
+  border-radius: 50%; border: none;
+  cursor: pointer; font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.remove-field { background: #FEE2E2; color: var(--danger); }
+.add-field-btn {
+  background: none; border: 1.5px dashed var(--primary);
+  color: var(--primary); padding: 10px;
+  border-radius: var(--radius-sm);
+  width: 100%; cursor: pointer;
+  font-size: 13px; font-weight: 600;
+  margin-top: 4px;
+}
+
+/* Back button */
+.back-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: none; border: none;
+  color: var(--primary); font-size: 14px;
+  font-weight: 600; cursor: pointer;
+  margin-bottom: 12px; padding: 4px 0;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 0; }
+
+/* Search */
+.search-bar {
+  position: relative; margin-bottom: 12px;
+}
+.search-bar input {
+  width: 100%; padding: 10px 14px 10px 38px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 14px; background: var(--card);
+  outline: none;
+}
+.search-bar input:focus { border-color: var(--primary); }
+.search-bar svg {
+  position: absolute; left: 12px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-sub); width: 18px; height: 18px;
+}
+
+/* Toast */
+.toast {
+  position: fixed; top: calc(var(--header-height) + 12px);
+  left: 50%; transform: translateX(-50%);
+  background: var(--text);
+  color: #fff; padding: 10px 20px;
+  border-radius: 24px; font-size: 13px; font-weight: 600;
+  z-index: 300;
+  opacity: 0; transition: opacity 0.3s;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <h1 id="headerTitle">📅 スケジュール</h1>
+  <div class="header-actions">
+    <button class="header-btn" onclick="openSettings()" title="設定">⚙</button>
+  </div>
+</div>
+
+<!-- Sync bar -->
+<div class="sync-bar" id="syncBar">同期中...</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Main content -->
+<div class="main" id="mainContent">
+
+  <!-- Schedule Page -->
+  <div class="page active" id="pageSchedule">
+    <div class="cal-header">
+      <h2 id="calMonth"></h2>
+      <div class="cal-nav">
+        <button onclick="changeMonth(-1)">◀</button>
+        <button onclick="goToday()">今日</button>
+        <button onclick="changeMonth(1)">▶</button>
+      </div>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="day-label" id="dayLabel"></div>
+    <div id="dayAppointments"></div>
+  </div>
+
+  <!-- Girls List Page -->
+  <div class="page" id="pageGirls">
+    <div class="search-bar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" placeholder="名前で検索..." id="girlSearch" oninput="renderGirlsList()">
+    </div>
+    <div id="girlsList"></div>
+  </div>
+
+  <!-- Profile Page -->
+  <div class="page" id="pageProfile">
+    <button class="back-btn" onclick="showPage('girls')">← 戻る</button>
+    <div id="profileContent"></div>
+  </div>
+
+  <!-- Summary Page -->
+  <div class="page" id="pageSummary">
+    <div class="cal-header">
+      <h2 id="summaryMonth"></h2>
+      <div class="cal-nav">
+        <button onclick="changeSummaryMonth(-1)">◀</button>
+        <button onclick="changeSummaryMonth(1)">▶</button>
+      </div>
+    </div>
+    <div id="summaryContent"></div>
+  </div>
+
+  <!-- Settings Page -->
+  <div class="page" id="pageSettings">
+    <div class="setting-item">
+      <h3>🔗 Googleスプレッドシート連携</h3>
+      <p>Google Apps Scriptのウェブアプリ URLを入力してデータ同期を有効にします</p>
+      <input type="text" class="form-input" id="gasUrl" placeholder="https://script.google.com/macros/s/...">
+      <div class="btn-row">
+        <button class="setting-btn btn-primary" onclick="saveGasUrl()" style="flex:1">保存</button>
+        <button class="setting-btn" onclick="testSync()" style="flex:1;background:var(--bg)">テスト接続</button>
+      </div>
+    </div>
+    <div class="setting-item">
+      <h3>📤 データエクスポート</h3>
+      <p>現在のデータをJSONファイルとしてエクスポートします</p>
+      <button class="setting-btn btn-primary" onclick="exportData()">エクスポート</button>
+    </div>
+    <div class="setting-item">
+      <h3>📥 データインポート</h3>
+      <p>JSONファイルからデータを復元します</p>
+      <input type="file" id="importFile" accept=".json" style="font-size:13px;margin-bottom:8px">
+      <button class="setting-btn btn-primary" onclick="importData()">インポート</button>
+    </div>
+    <div class="setting-item">
+      <h3>🗑 データリセット</h3>
+      <p>すべてのデータを削除します（元に戻せません）</p>
+      <button class="setting-btn" style="background:#FEE2E2;color:var(--danger)" onclick="resetData()">全データ削除</button>
+    </div>
+  </div>
+</div>
+
+<!-- FAB -->
+<button class="fab" id="fab" onclick="openAddModal()">+</button>
+
+<!-- Bottom Nav -->
+<nav class="nav">
+  <button class="nav-item active" data-page="schedule" onclick="showPage('schedule')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    <span>スケジュール</span>
+  </button>
+  <button class="nav-item" data-page="girls" onclick="showPage('girls')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    <span>リスト</span>
+  </button>
+  <button class="nav-item" data-page="summary" onclick="showPage('summary')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
+    <span>サマリー</span>
+  </button>
+</nav>
+
+<!-- Modal: Add/Edit Appointment -->
+<div class="modal-overlay" id="modalAppt">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2 id="modalApptTitle">予定を追加</h2>
+    <input type="hidden" id="apptId">
+    <div class="form-group">
+      <label>女の子</label>
+      <select class="form-input" id="apptGirl"></select>
+    </div>
+    <div class="form-group">
+      <label>面談タイブ</label>
+      <div class="type-select" id="typeSelect"></div>
+    </div>
+    <div class="form-group">
+      <label>日付</label>
+      <input type="date" class="form-input" id="apptDate">
+    </div>
+    <div class="form-group">
+      <label>時間</label>
+      <input type="time" class="form-input" id="apptTime">
+    </div>
+    <div class="form-group">
+      <label>場所</label>
+      <input type="text" class="form-input" id="apptLocation" placeholder="例: 渋谷カフェ">
+    </div>
+    <div class="form-group">
+      <label>金額 <span id="apptAmountHint" style="color:var(--primary);font-size:11px"></span></label>
+      <input type="number" class="form-input" id="apptAmount" placeholder="0">
+    </div>
+    <div class="form-group">
+      <label>メモ</label>
+      <textarea class="form-input" id="apptMemo" placeholder="メモを入力..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>ステータス</label>
+      <select class="form-input" id="apptStatus">
+        <option value="scheduled">予定</option>
+        <option value="confirmed">確定</option>
+        <option value="done">完了</option>
+        <option value="cancelled">キャンセル</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" onclick="saveAppointment()">保存</button>
+    <button class="btn btn-danger" id="deleteApptBtn" onclick="deleteAppointment()" style="display:none">削除</button>
+    <button class="btn btn-secondary" onclick="closeModal('modalAppt')">キャンセル</button>
+  </div>
+</div>
+
+<!-- Modal: Add/Edit Girl -->
+<div class="modal-overlay" id="modalGirl">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2 id="modalGirlTitle">女の子を追加</h2>
+    <input type="hidden" id="girlId">
+    <div class="form-group">
+      <label>名前</label>
+      <input type="text" class="form-input" id="girlName" placeholder="例: さくら">
+    </div>
+    <div class="form-group">
+      <label>年齢</label>
+      <input type="number" class="form-input" id="girlAge" placeholder="例: 22">
+    </div>
+    <div class="form-group">
+      <label>ステータス</label>
+      <select class="form-input" id="girlStatus">
+        <option value="active">アクティブ</option>
+        <option value="paused">休止中</option>
+        <option value="ended">終了</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>メモ</label>
+      <textarea class="form-input" id="girlMemo" placeholder="メモ..."></textarea>
+    </div>
+
+    <h3 style="font-size:15px;font-weight:700;margin:20px 0 12px;color:var(--primary)">💰 お手当設定（タイプ別）</h3>
+    <div id="allowanceInputs"></div>
+
+    <h3 style="font-size:15px;font-weight:700;margin:20px 0 12px;color:var(--primary)">📝 カスタム項目</h3>
+    <div id="customFieldInputs"></div>
+    <button class="add-field-btn" onclick="addCustomFieldInput()">＋ 項目を追加</button>
+
+    <div style="margin-top:20px">
+      <button class="btn btn-primary" onclick="saveGirl()">保存</button>
+      <button class="btn btn-danger" id="deleteGirlBtn" onclick="deleteGirl()" style="display:none">削除</button>
+      <button class="btn btn-secondary" onclick="closeModal('modalGirl')">キャンセル</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== DATA =====
+const TYPES = [
+  { id: 'meet', label: '顔合わせ', color: 'var(--type-meet)' },
+  { id: 'tea', label: 'お茶', color: 'var(--type-tea)' },
+  { id: 'dinner', label: '食事', color: 'var(--type-dinner)' },
+  { id: 'adult', label: '大人', color: 'var(--type-adult)' },
+  { id: 'meet_adult', label: '顔合わせ大人', color: 'var(--type-meet-adult)' }
+];
+
+const AVATAR_COLORS = ['#FF6B9D','#8B5CF6','#10B981','#F59E0B','#EC4899','#6366F1','#14B8A6','#F97316','#E11D48','#7C3AED'];
+
+let data = { girls: [], appointments: [], settings: {} };
+let currentMonth = new Date();
+let selectedDate = new Date();
+let summaryMonth = new Date();
+let selectedType = '';
+let currentGirlId = null;
+
+// ===== STORAGE =====
+function loadData() {
+  try {
+    const saved = localStorage.getItem('pk_data');
+    if (saved) data = JSON.parse(saved);
+  } catch(e) { console.error(e); }
+}
+
+function saveData() {
+  try {
+    localStorage.setItem('pk_data', JSON.stringify(data));
+  } catch(e) { console.error(e); }
+  syncToSheet();
+}
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+// ===== GOOGLE SHEETS SYNC =====
+async function syncToSheet() {
+  const url = data.settings.gasUrl;
+  if (!url) return;
+  try {
+    document.getElementById('syncBar').classList.add('show');
+    await fetch(url, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'sync', data: data })
+    });
+    setTimeout(() => document.getElementById('syncBar').classList.remove('show'), 1000);
+  } catch(e) {
+    document.getElementById('syncBar').textContent = '同期失敗';
+    setTimeout(() => document.getElementById('syncBar').classList.remove('show'), 2000);
+  }
+}
+
+async function pullFromSheet() {
+  const url = data.settings.gasUrl;
+  if (!url) return;
+  try {
+    document.getElementById('syncBar').textContent = 'データ取得中...';
+    document.getElementById('syncBar').classList.add('show');
+    const resp = await fetch(url + '?action=pull');
+    const result = await resp.json();
+    if (result && result.girls) {
+      data.girls = result.girls;
+      data.appointments = result.appointments;
+      saveDataLocal();
+      renderAll();
+      showToast('同期完了');
+    }
+  } catch(e) {
+    showToast('同期失敗');
+  }
+  document.getElementById('syncBar').classList.remove('show');
+}
+
+function saveDataLocal() {
+  try { localStorage.setItem('pk_data', JSON.stringify(data)); } catch(e) {}
+}
+
+// ===== PAGES =====
+function showPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+  const pageEl = document.getElementById('page' + page.charAt(0).toUpperCase() + page.slice(1));
+  if (pageEl) pageEl.classList.add('active');
+
+  const navEl = document.querySelector(`.nav-item[data-page="${page}"]`);
+  if (navEl) navEl.classList.add('active');
+
+  const titles = { schedule: '📅 スケジュール', girls: '👩 リスト', summary: '📊 サマリー', profile: '👤 プロフィール', settings: '⚙ 設定' };
+  document.getElementById('headerTitle').textContent = titles[page] || '';
+
+  const fab = document.getElementById('fab');
+  fab.style.display = (page === 'schedule' || page === 'girls') ? 'flex' : 'none';
+
+  if (page === 'schedule') renderCalendar();
+  if (page === 'girls') renderGirlsList();
+  if (page === 'summary') renderSummary();
+}
+
+function openSettings() { showPage('settings'); loadSettings(); }
+
+function loadSettings() {
+  document.getElementById('gasUrl').value = data.settings.gasUrl || '';
+}
+
+function saveGasUrl() {
+  data.settings.gasUrl = document.getElementById('gasUrl').value.trim();
+  saveData();
+  showToast('URL保存済み');
+}
+
+async function testSync() {
+  const url = data.settings.gasUrl;
+  if (!url) { showToast('URLを入力してください'); return; }
+  try {
+    const resp = await fetch(url + '?action=test');
+    const result = await resp.json();
+    if (result.status === 'ok') showToast('接続成功！');
+    else showToast('接続失敗');
+  } catch(e) {
+    showToast('接続エラー');
+  }
+}
+
+// ===== CALENDAR =====
+function renderCalendar() {
+  const year = currentMonth.getFullYear();
+  const month = currentMonth.getMonth();
+  document.getElementById('calMonth').textContent = `${year}年 ${month + 1}月`;
+
+  const grid = document.getElementById('calGrid');
+  const dows = ['日','月','火','水','木','金','土'];
+  let html = dows.map(d => `<div class="cal-dow">${d}</div>`).join('');
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const prevDays = new Date(year, month, 0).getDate();
+  const today = new Date();
+
+  // Previous month
+  for (let i = firstDay - 1; i >= 0; i--) {
+    html += `<div class="cal-day other">${prevDays - i}</div>`;
+  }
+
+  // Current month
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday = today.getFullYear() === year && today.getMonth() === month && today.getDate() === d;
+    const isSelected = selectedDate.getFullYear() === year && selectedDate.getMonth() === month && selectedDate.getDate() === d;
+    const dayAppts = data.appointments.filter(a => a.date === dateStr && a.status !== 'cancelled');
+    const dots = dayAppts.slice(0, 3).map(a => {
+      const type = TYPES.find(t => t.id === a.type);
+      return `<span style="background:${type ? type.color : 'var(--primary)'}"></span>`;
+    }).join('');
+
+    let cls = 'cal-day';
+    if (isToday) cls += ' today';
+    if (isSelected) cls += ' selected';
+
+    html += `<div class="${cls}" onclick="selectDate(${year},${month},${d})">
+      ${d}
+      <div class="cal-dots">${dots}</div>
+    </div>`;
+  }
+
+  // Next month
+  const total = firstDay + daysInMonth;
+  const remaining = (7 - total % 7) % 7;
+  for (let i = 1; i <= remaining; i++) {
+    html += `<div class="cal-day other">${i}</div>`;
+  }
+
+  grid.innerHTML = html;
+  renderDayAppointments();
+}
+
+function selectDate(y, m, d) {
+  selectedDate = new Date(y, m, d);
+  renderCalendar();
+}
+
+function changeMonth(dir) {
+  currentMonth.setMonth(currentMonth.getMonth() + dir);
+  renderCalendar();
+}
+
+function goToday() {
+  currentMonth = new Date();
+  selectedDate = new Date();
+  renderCalendar();
+}
+
+function renderDayAppointments() {
+  const dateStr = formatDate(selectedDate);
+  const dows = ['日','月','火','水','木','金','土'];
+  document.getElementById('dayLabel').textContent =
+    `${selectedDate.getMonth()+1}/${selectedDate.getDate()}（${dows[selectedDate.getDay()]}）の予定`;
+
+  const appts = data.appointments
+    .filter(a => a.date === dateStr)
+    .sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+
+  if (appts.length === 0) {
+    document.getElementById('dayAppointments').innerHTML = '<div class="appt-empty">予定はありません</div>';
+    return;
+  }
+
+  document.getElementById('dayAppointments').innerHTML = appts.map(a => {
+    const girl = data.girls.find(g => g.id === a.girlId);
+    const type = TYPES.find(t => t.id === a.type);
+    const statusColors = { scheduled: '#E5E7EB', confirmed: '#D1FAE5', done: '#DDD6FE', cancelled: '#FEE2E2' };
+    const borderColor = a.status === 'cancelled' ? 'var(--danger)' : (type ? type.color : 'var(--primary)');
+    const opacity = a.status === 'cancelled' ? '0.5' : '1';
+
+    return `<div class="appt-card" style="border-left-color:${borderColor};opacity:${opacity}" onclick="editAppointment('${a.id}')">
+      <div class="appt-time">${a.time || '--:--'}</div>
+      <div class="appt-info">
+        <div class="appt-name">${girl ? girl.name : '不明'}</div>
+        <span class="appt-type" style="background:${type ? type.color : '#999'}">${type ? type.label : a.type}</span>
+        ${a.location ? `<div style="font-size:12px;color:var(--text-sub);margin-top:4px">📍 ${a.location}</div>` : ''}
+      </div>
+      <div class="appt-amount">${a.amount ? formatYen(a.amount) : ''}</div>
+    </div>`;
+  }).join('');
+}
+
+// ===== GIRLS LIST =====
+function renderGirlsList() {
+  const search = document.getElementById('girlSearch').value.toLowerCase();
+  const filtered = data.girls.filter(g => g.name.toLowerCase().includes(search));
+
+  if (filtered.length === 0) {
+    document.getElementById('girlsList').innerHTML = '<div class="appt-empty">女の子が登録されていません</div>';
+    return;
+  }
+
+  document.getElementById('girlsList').innerHTML = filtered.map((g, i) => {
+    const color = AVATAR_COLORS[i % AVATAR_COLORS.length];
+    const statusMap = { active: ['アクティブ', 'status-active'], paused: ['休止中', 'status-paused'], ended: ['終了', 'status-ended'] };
+    const [statusLabel, statusClass] = statusMap[g.status] || ['不明', ''];
+    const apptCount = data.appointments.filter(a => a.girlId === g.id && a.status !== 'cancelled').length;
+
+    return `<div class="girl-card" onclick="showProfile('${g.id}')">
+      <div class="girl-avatar" style="background:${color}">${g.name.charAt(0)}</div>
+      <div class="girl-info">
+        <div class="girl-name">${g.name}</div>
+        <div class="girl-sub">${g.age ? g.age + '歳' : ''} ・ ${apptCount}回</div>
+      </div>
+      <span class="girl-status ${statusClass}">${statusLabel}</span>
+    </div>`;
+  }).join('');
+}
+
+// ===== PROFILE =====
+function showProfile(girlId) {
+  currentGirlId = girlId;
+  const g = data.girls.find(x => x.id === girlId);
+  if (!g) return;
+
+  const color = AVATAR_COLORS[data.girls.indexOf(g) % AVATAR_COLORS.length];
+  const appts = data.appointments.filter(a => a.girlId === girlId).sort((a, b) => b.date.localeCompare(a.date));
+  const totalSpent = appts.filter(a => a.status === 'done').reduce((s, a) => s + (Number(a.amount) || 0), 0);
+
+  let html = `
+    <div class="profile-header" style="background:linear-gradient(135deg,${color},${color}99)">
+      <div class="profile-avatar" style="background:rgba(255,255,255,0.2)">${g.name.charAt(0)}</div>
+      <div class="profile-name">${g.name}</div>
+      <div style="margin-top:4px;font-size:13px;opacity:0.9">${g.age ? g.age + '歳' : ''}</div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button class="btn btn-primary" style="flex:1;padding:10px;font-size:13px" onclick="editGirl('${g.id}')">✏️ 編集</button>
+      <button class="btn" style="flex:1;padding:10px;font-size:13px;background:var(--bg)" onclick="openAddApptForGirl('${g.id}')">＋ 予定追加</button>
+    </div>
+
+    <div class="profile-section">
+      <h3>💰 お手当設定</h3>
+      <div class="allowance-grid">
+        ${TYPES.map(t => {
+          const amt = g.allowances && g.allowances[t.id] ? g.allowances[t.id] : 0;
+          return `<div class="allowance-item">
+            <div class="type" style="color:${t.color}">${t.label}</div>
+            <div class="amount">${formatYen(amt)}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    <div class="profile-section">
+      <h3>📊 統計</h3>
+      <div class="profile-row">
+        <span class="label">累計回数</span>
+        <span class="value">${appts.filter(a => a.status === 'done').length}回</span>
+      </div>
+      <div class="profile-row">
+        <span class="label">累計金額</span>
+        <span class="value" style="color:var(--primary)">${formatYen(totalSpent)}</span>
+      </div>
+    </div>`;
+
+  // Custom fields
+  if (g.customFields && g.customFields.length > 0) {
+    html += `<div class="profile-section"><h3>📝 詳細情報</h3>`;
+    g.customFields.forEach(f => {
+      html += `<div class="profile-row">
+        <span class="label">${f.key}</span>
+        <span class="value">${f.value}</span>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  // Memo
+  if (g.memo) {
+    html += `<div class="profile-section"><h3>📌 メモ</h3><div style="font-size:14px;line-height:1.6;white-space:pre-wrap">${escapeHtml(g.memo)}</div></div>`;
+  }
+
+  // Recent appointments
+  if (appts.length > 0) {
+    html += `<div class="profile-section"><h3>📅 直近の予定</h3>`;
+    appts.slice(0, 10).forEach(a => {
+      const type = TYPES.find(t => t.id === a.type);
+      const statusEmoji = { scheduled: '🔵', confirmed: '🟢', done: '✅', cancelled: '❌' };
+      html += `<div class="profile-row" onclick="editAppointment('${a.id}')" style="cursor:pointer">
+        <span class="label">${a.date} ${statusEmoji[a.status] || ''}</span>
+        <span>
+          <span class="tag" style="background:${type ? type.color : '#999'};color:#fff">${type ? type.label : ''}</span>
+          <span class="value">${formatYen(a.amount || 0)}</span>
+        </span>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  document.getElementById('profileContent').innerHTML = html;
+  showPage('profile');
+}
+
+// ===== SUMMARY =====
+function renderSummary() {
+  const year = summaryMonth.getFullYear();
+  const month = summaryMonth.getMonth();
+  document.getElementById('summaryMonth').textContent = `${year}年 ${month + 1}月`;
+
+  const monthStr = `${year}-${String(month+1).padStart(2,'0')}`;
+  const monthAppts = data.appointments.filter(a => a.date.startsWith(monthStr) && a.status !== 'cancelled');
+  const doneAppts = monthAppts.filter(a => a.status === 'done');
+  const totalAmount = doneAppts.reduce((s, a) => s + (Number(a.amount) || 0), 0);
+  const scheduledAmount = monthAppts.filter(a => a.status !== 'done').reduce((s, a) => s + (Number(a.amount) || 0), 0);
+
+  let html = `
+    <div class="summary-card">
+      <div class="summary-total">${formatYen(totalAmount)}</div>
+      <div class="summary-label">今月の支出（完了分）</div>
+      <div style="font-size:14px;color:var(--warning);margin-top:8px">予定: ${formatYen(scheduledAmount)}</div>
+      <div class="summary-breakdown">
+        <div class="summary-item">
+          <div class="count">${monthAppts.length}</div>
+          <div class="label">予定数</div>
+        </div>
+        <div class="summary-item">
+          <div class="count">${doneAppts.length}</div>
+          <div class="label">完了</div>
+        </div>
+      </div>
+    </div>`;
+
+  // By type
+  html += `<div class="profile-section"><h3>📊 タイプ別集計</h3>`;
+  TYPES.forEach(t => {
+    const typeAppts = doneAppts.filter(a => a.type === t.id);
+    const typeTotal = typeAppts.reduce((s, a) => s + (Number(a.amount) || 0), 0);
+    html += `<div class="profile-row">
+      <span><span class="tag" style="background:${t.color};color:#fff">${t.label}</span></span>
+      <span class="value">${typeAppts.length}回 / ${formatYen(typeTotal)}</span>
+    </div>`;
+  });
+  html += `</div>`;
+
+  // By girl
+  html += `<div class="profile-section"><h3>👩 女の子別集計</h3>`;
+  const girlTotals = {};
+  doneAppts.forEach(a => {
+    if (!girlTotals[a.girlId]) girlTotals[a.girlId] = { count: 0, amount: 0 };
+    girlTotals[a.girlId].count++;
+    girlTotals[a.girlId].amount += Number(a.amount) || 0;
+  });
+  Object.entries(girlTotals)
+    .sort((a, b) => b[1].amount - a[1].amount)
+    .forEach(([gid, t]) => {
+      const girl = data.girls.find(g => g.id === gid);
+      html += `<div class="profile-row">
+        <span class="label">${girl ? girl.name : '不明'}</span>
+        <span class="value">${t.count}回 / ${formatYen(t.amount)}</span>
+      </div>`;
+    });
+  html += `</div>`;
+
+  document.getElementById('summaryContent').innerHTML = html;
+}
+
+function changeSummaryMonth(dir) {
+  summaryMonth.setMonth(summaryMonth.getMonth() + dir);
+  renderSummary();
+}
+
+// ===== MODALS =====
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function openAddModal() {
+  const activePage = document.querySelector('.nav-item.active')?.dataset.page;
+  if (activePage === 'girls') {
+    openAddGirl();
+  } else {
+    openAddAppt();
+  }
+}
+
+// -- Appointment Modal --
+function openAddAppt() {
+  document.getElementById('modalApptTitle').textContent = '予定を追加';
+  document.getElementById('apptId').value = '';
+  document.getElementById('apptDate').value = formatDate(selectedDate);
+  document.getElementById('apptTime').value = '';
+  document.getElementById('apptLocation').value = '';
+  document.getElementById('apptAmount').value = '';
+  document.getElementById('apptMemo').value = '';
+  document.getElementById('apptStatus').value = 'scheduled';
+  document.getElementById('deleteApptBtn').style.display = 'none';
+  selectedType = '';
+  renderGirlSelect();
+  renderTypeSelect();
+  openModal('modalAppt');
+}
+
+function openAddApptForGirl(girlId) {
+  openAddAppt();
+  document.getElementById('apptGirl').value = girlId;
+  onGirlOrTypeChange();
+}
+
+function editAppointment(id) {
+  const a = data.appointments.find(x => x.id === id);
+  if (!a) return;
+  document.getElementById('modalApptTitle').textContent = '予定を編集';
+  document.getElementById('apptId').value = a.id;
+  document.getElementById('apptDate').value = a.date;
+  document.getElementById('apptTime').value = a.time || '';
+  document.getElementById('apptLocation').value = a.location || '';
+  document.getElementById('apptAmount').value = a.amount || '';
+  document.getElementById('apptMemo').value = a.memo || '';
+  document.getElementById('apptStatus').value = a.status || 'scheduled';
+  document.getElementById('deleteApptBtn').style.display = 'block';
+  selectedType = a.type;
+  renderGirlSelect();
+  document.getElementById('apptGirl').value = a.girlId;
+  renderTypeSelect();
+  openModal('modalAppt');
+}
+
+function renderGirlSelect() {
+  const sel = document.getElementById('apptGirl');
+  sel.innerHTML = '<option value="">選択してください</option>' +
+    data.girls.filter(g => g.status === 'active').map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+  sel.onchange = onGirlOrTypeChange;
+}
+
+function renderTypeSelect() {
+  document.getElementById('typeSelect').innerHTML = TYPES.map(t =>
+    `<div class="type-option ${selectedType === t.id ? 'selected' : ''}"
+       style="${selectedType === t.id ? 'border-color:' + t.color + ';color:' + t.color : ''}"
+       onclick="selectType('${t.id}')">${t.label}</div>`
+  ).join('');
+}
+
+function selectType(id) {
+  selectedType = id;
+  renderTypeSelect();
+  onGirlOrTypeChange();
+}
+
+function onGirlOrTypeChange() {
+  const girlId = document.getElementById('apptGirl').value;
+  const girl = data.girls.find(g => g.id === girlId);
+  if (girl && selectedType && girl.allowances && girl.allowances[selectedType]) {
+    const defaultAmt = girl.allowances[selectedType];
+    document.getElementById('apptAmountHint').textContent = `（設定額: ${formatYen(defaultAmt)}）`;
+    if (!document.getElementById('apptAmount').value) {
+      document.getElementById('apptAmount').value = defaultAmt;
+    }
+  } else {
+    document.getElementById('apptAmountHint').textContent = '';
+  }
+}
+
+function saveAppointment() {
+  const girlId = document.getElementById('apptGirl').value;
+  if (!girlId) { showToast('女の子を選択してください'); return; }
+  if (!selectedType) { showToast('面談タイプを選択してください'); return; }
+  if (!document.getElementById('apptDate').value) { showToast('日付を入力してください'); return; }
+
+  const appt = {
+    id: document.getElementById('apptId').value || uid(),
+    girlId,
+    type: selectedType,
+    date: document.getElementById('apptDate').value,
+    time: document.getElementById('apptTime').value,
+    location: document.getElementById('apptLocation').value,
+    amount: Number(document.getElementById('apptAmount').value) || 0,
+    memo: document.getElementById('apptMemo').value,
+    status: document.getElementById('apptStatus').value
+  };
+
+  const idx = data.appointments.findIndex(a => a.id === appt.id);
+  if (idx >= 0) data.appointments[idx] = appt;
+  else data.appointments.push(appt);
+
+  saveData();
+  closeModal('modalAppt');
+  renderCalendar();
+  showToast('保存しました');
+}
+
+function deleteAppointment() {
+  const id = document.getElementById('apptId').value;
+  if (!id || !confirm('この予定を削除しますか？')) return;
+  data.appointments = data.appointments.filter(a => a.id !== id);
+  saveData();
+  closeModal('modalAppt');
+  renderCalendar();
+  showToast('削除しました');
+}
+
+// -- Girl Modal --
+function openAddGirl() {
+  document.getElementById('modalGirlTitle').textContent = '女の子を追加';
+  document.getElementById('girlId').value = '';
+  document.getElementById('girlName').value = '';
+  document.getElementById('girlAge').value = '';
+  document.getElementById('girlStatus').value = 'active';
+  document.getElementById('girlMemo').value = '';
+  document.getElementById('deleteGirlBtn').style.display = 'none';
+  renderAllowanceInputs({});
+  renderCustomFieldInputs([]);
+  openModal('modalGirl');
+}
+
+function editGirl(id) {
+  const g = data.girls.find(x => x.id === id);
+  if (!g) return;
+  document.getElementById('modalGirlTitle').textContent = '女の子を編集';
+  document.getElementById('girlId').value = g.id;
+  document.getElementById('girlName').value = g.name;
+  document.getElementById('girlAge').value = g.age || '';
+  document.getElementById('girlStatus').value = g.status || 'active';
+  document.getElementById('girlMemo').value = g.memo || '';
+  document.getElementById('deleteGirlBtn').style.display = 'block';
+  renderAllowanceInputs(g.allowances || {});
+  renderCustomFieldInputs(g.customFields || []);
+  openModal('modalGirl');
+}
+
+function renderAllowanceInputs(allowances) {
+  document.getElementById('allowanceInputs').innerHTML = TYPES.map(t =>
+    `<div class="form-group" style="margin-bottom:10px">
+      <label style="display:flex;align-items:center;gap:6px">
+        <span class="tag" style="background:${t.color};color:#fff">${t.label}</span>
+      </label>
+      <input type="number" class="form-input" id="allowance_${t.id}" value="${allowances[t.id] || ''}" placeholder="金額（円）">
+    </div>`
+  ).join('');
+}
+
+function renderCustomFieldInputs(fields) {
+  const container = document.getElementById('customFieldInputs');
+  container.innerHTML = '';
+  fields.forEach((f, i) => {
+    const row = document.createElement('div');
+    row.className = 'custom-field-row';
+    row.innerHTML = `
+      <input type="text" class="form-input cf-key" value="${escapeHtml(f.key)}" placeholder="項目名">
+      <input type="text" class="form-input cf-val" value="${escapeHtml(f.value)}" placeholder="内容">
+      <button class="remove-field" onclick="this.parentElement.remove()">×</button>`;
+    container.appendChild(row);
+  });
+}
+
+function addCustomFieldInput() {
+  const container = document.getElementById('customFieldInputs');
+  const row = document.createElement('div');
+  row.className = 'custom-field-row';
+  row.innerHTML = `
+    <input type="text" class="form-input cf-key" placeholder="項目名">
+    <input type="text" class="form-input cf-val" placeholder="内容">
+    <button class="remove-field" onclick="this.parentElement.remove()">×</button>`;
+  container.appendChild(row);
+}
+
+function saveGirl() {
+  const name = document.getElementById('girlName').value.trim();
+  if (!name) { showToast('名前を入力してください'); return; }
+
+  const allowances = {};
+  TYPES.forEach(t => {
+    const val = document.getElementById('allowance_' + t.id).value;
+    if (val) allowances[t.id] = Number(val);
+  });
+
+  const customFields = [];
+  document.querySelectorAll('#customFieldInputs .custom-field-row').forEach(row => {
+    const key = row.querySelector('.cf-key').value.trim();
+    const value = row.querySelector('.cf-val').value.trim();
+    if (key) customFields.push({ key, value });
+  });
+
+  const girl = {
+    id: document.getElementById('girlId').value || uid(),
+    name,
+    age: document.getElementById('girlAge').value ? Number(document.getElementById('girlAge').value) : null,
+    status: document.getElementById('girlStatus').value,
+    memo: document.getElementById('girlMemo').value,
+    allowances,
+    customFields,
+    createdAt: new Date().toISOString()
+  };
+
+  const idx = data.girls.findIndex(g => g.id === girl.id);
+  if (idx >= 0) {
+    girl.createdAt = data.girls[idx].createdAt;
+    data.girls[idx] = girl;
+  } else {
+    data.appointments.push(); // noop
+    data.girls.push(girl);
+  }
+
+  saveData();
+  closeModal('modalGirl');
+  renderGirlsList();
+  if (currentGirlId === girl.id) showProfile(girl.id);
+  showToast('保存しました');
+}
+
+function deleteGirl() {
+  const id = document.getElementById('girlId').value;
+  if (!id) return;
+  const girl = data.girls.find(g => g.id === id);
+  if (!confirm(`${girl ? girl.name : ''}を削除しますか？関連する予定も削除されます。`)) return;
+  data.girls = data.girls.filter(g => g.id !== id);
+  data.appointments = data.appointments.filter(a => a.girlId !== id);
+  saveData();
+  closeModal('modalGirl');
+  showPage('girls');
+  showToast('削除しました');
+}
+
+// ===== EXPORT / IMPORT =====
+function exportData() {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `pk_backup_${formatDate(new Date())}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('エクスポート完了');
+}
+
+function importData() {
+  const file = document.getElementById('importFile').files[0];
+  if (!file) { showToast('ファイルを選択してください'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (imported.girls && imported.appointments) {
+        data = imported;
+        saveData();
+        renderAll();
+        showToast('インポート完了');
+      } else {
+        showToast('データ形式が不正です');
+      }
+    } catch(err) {
+      showToast('読み込みエラー');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function resetData() {
+  if (!confirm('全てのデータが削除されます。本当によろしいですか？')) return;
+  if (!confirm('本当に削除しますか？（元に戻せません）')) return;
+  data = { girls: [], appointments: [], settings: data.settings };
+  saveData();
+  renderAll();
+  showToast('データを削除しました');
+}
+
+// ===== UTILS =====
+function formatDate(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function formatYen(n) {
+  if (!n && n !== 0) return '';
+  return '¥' + Number(n).toLocaleString();
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2000);
+}
+
+function renderAll() {
+  renderCalendar();
+  renderGirlsList();
+  renderSummary();
+}
+
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) overlay.classList.remove('open');
+  });
+});
+
+// ===== INIT =====
+loadData();
+renderAll();
+</script>
+</body>
+</html>
