@@ -604,6 +604,15 @@ textarea.form-input { resize: vertical; min-height: 80px; }
         <button class="setting-btn" onclick="testSync()" style="flex:1;background:var(--bg)">テスト接続</button>
       </div>
     </div>
+    <div class="setting-item" id="syncButtons" style="display:none">
+      <h3>ð¡ ãã¼ã¿åæ</h3>
+      <p style="font-size:13px;color:var(--text-sub);margin-bottom:12px">ã¹ãã¬ããã·ã¼ãã¨ãã¼ã¿ãåæãã¾ã</p>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="syncToSheet()">ð¤ åæï¼éä¿¡ï¼</button>
+        <button class="btn btn-secondary" onclick="pullFromSheet()">ð¥ ãã¼ã¿åå¾</button>
+      </div>
+    </div>
+
     <div class="setting-item">
       <h3>📤 データエクスポート</h3>
       <p>現在のデータをJSONファイルとしてエクスポートします</p>
@@ -861,7 +870,9 @@ function showPage(page) {
   if (page === 'summary') renderSummary();
 }
 
-function openSettings() { showPage('settings'); loadSettings(); }
+function openSettings() { showPage('settings'); loadSettings(); 
+  document.getElementById('syncButtons').style.display = data.settings.gasUrl ? 'block' : 'none';
+}
 
 function loadSettings() {
   document.getElementById('gasUrl').value = data.settings.gasUrl || '';
@@ -871,6 +882,8 @@ function saveGasUrl() {
   data.settings.gasUrl = document.getElementById('gasUrl').value.trim();
   saveData();
   showToast('URL保存済み');
+
+  document.getElementById('syncButtons').style.display = data.settings.gasUrl ? 'block' : 'none';
 }
 
 async function testSync() {
