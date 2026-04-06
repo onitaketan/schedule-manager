@@ -772,16 +772,32 @@ async function syncToSheet() {
   const url = data.settings.gasUrl;
   if (!url) return;
   try {
+    document.getElementById('syncBar').textContent = 'åæä¸­...';
     document.getElementById('syncBar').classList.add('show');
-    await fetch(url, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: 'sync', data: data })
-    });
-    setTimeout(() => document.getElementById('syncBar').classList.remove('show'), 1000);
+    const payload = JSON.stringify(data);
+    const chunkSize = 1500;
+    const chunks = [];
+    for (let i = 0; i < payload.length; i += chunkSize) {
+      chunks.push(payload.substring(i, i + chunkSize));
+    }
+    await fetch(url + '?action=sync_init&total=' + chunks.length);
+    for (let i = 0; i < chunks.length; i++) {
+      await fetch(url + '?action=sync_chunk&index=' + i + '&chunk=' + encodeURIComponent(chunks[i]));
+    }
+    const resp = await fetch(url + '?action=sync_finalize');
+    const result = await resp.json();
+    if (result.status === 'ok') {
+      document.getElementById('syncBar').textContent = 'åæå®äº';
+    } else {
+      document.getElementById('syncBar').textContent = 'åæå¤±æ';
+    }
+    setTimeout(() => {
+      document.getElementById('syncBar').textContent = 'åæä¸­...';
+      document.getElementById('syncBar').classList.remove('show');
+    }, 1500);
   } catch(e) {
-    document.getElementById('syncBar').textContent = '同期失敗';
+    console.error('sync error:', e);
+    document.getElementById('syncBar').textContent = 'åæå¤±æ';
     setTimeout(() => document.getElementById('syncBar').classList.remove('show'), 2000);
   }
 }
@@ -790,19 +806,31 @@ async function pullFromSheet() {
   const url = data.settings.gasUrl;
   if (!url) return;
   try {
-    document.getElementById('syncBar').textContent = 'データ取得中...';
+    document.getElementById('syncBar').textContent = 'ãã¼ã¿åå¾ä¸­...';
     document.getElementById('syncBar').classList.add('show');
     const resp = await fetch(url + '?action=pull');
     const result = await resp.json();
     if (result && result.girls) {
+      const savedGasUrl = data.settings.gasUrl;
       data.girls = result.girls;
       data.appointments = result.appointments;
+      if (result.settings) {
+        data.settings = result.settings;
+      }
+      data.settings.gasUrl = savedGasUrl;
       saveDataLocal();
       renderAll();
-      showToast('同期完了');
+      document.getElementById('syncBar').textContent = 'åå¾å®äº';
+      setTimeout(() => {
+        document.getElementById('syncBar').textContent = 'åæä¸­...';
+        document.getElementById('syncBar').classList.remove('show');
+      }, 1500);
+      return;
     }
+    showToast('ãã¼ã¿ãªã');
   } catch(e) {
-    showToast('同期失敗');
+    console.error('pull error:', e);
+    showToast('åæå¤±æ');
   }
   document.getElementById('syncBar').classList.remove('show');
 }
