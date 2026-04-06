@@ -605,11 +605,11 @@ textarea.form-input { resize: vertical; min-height: 80px; }
       </div>
     </div>
     <div class="setting-item" id="syncButtons" style="display:none">
-      <h3>ð¡ ãã¼ã¿åæ</h3>
-      <p style="font-size:13px;color:var(--text-sub);margin-bottom:12px">ã¹ãã¬ããã·ã¼ãã¨ãã¼ã¿ãåæãã¾ã</p>
+      <h3>📡 データ同期</h3>
+      <p style="font-size:13px;color:var(--text-sub);margin-bottom:12px">スプレッドシートとデータを同期します</p>
       <div class="btn-row">
-        <button class="btn btn-primary" onclick="syncToSheet()">ð¤ åæï¼éä¿¡ï¼</button>
-        <button class="btn btn-secondary" onclick="pullFromSheet()">ð¥ ãã¼ã¿åå¾</button>
+        <button class="btn btn-primary" onclick="syncToSheet()">📤 同期（送信）</button>
+        <button class="btn btn-secondary" onclick="pullFromSheet()">📥 データ取得</button>
       </div>
     </div>
 
@@ -781,7 +781,7 @@ async function syncToSheet() {
   const url = data.settings.gasUrl;
   if (!url) return;
   try {
-    document.getElementById('syncBar').textContent = 'åæä¸­...';
+    document.getElementById('syncBar').textContent = '同期中...';
     document.getElementById('syncBar').classList.add('show');
     const payload = JSON.stringify(data);
     const chunkSize = 1500;
@@ -796,17 +796,17 @@ async function syncToSheet() {
     const resp = await fetch(url + '?action=sync_finalize');
     const result = await resp.json();
     if (result.status === 'ok') {
-      document.getElementById('syncBar').textContent = 'åæå®äº';
+      document.getElementById('syncBar').textContent = '同期完了';
     } else {
-      document.getElementById('syncBar').textContent = 'åæå¤±æ';
+      document.getElementById('syncBar').textContent = '同期失敗';
     }
     setTimeout(() => {
-      document.getElementById('syncBar').textContent = 'åæä¸­...';
+      document.getElementById('syncBar').textContent = '同期中...';
       document.getElementById('syncBar').classList.remove('show');
     }, 1500);
   } catch(e) {
     console.error('sync error:', e);
-    document.getElementById('syncBar').textContent = 'åæå¤±æ';
+    document.getElementById('syncBar').textContent = '同期失敗';
     setTimeout(() => document.getElementById('syncBar').classList.remove('show'), 2000);
   }
 }
@@ -815,7 +815,7 @@ async function pullFromSheet() {
   const url = data.settings.gasUrl;
   if (!url) return;
   try {
-    document.getElementById('syncBar').textContent = 'ãã¼ã¿åå¾ä¸­...';
+    document.getElementById('syncBar').textContent = 'データ取得中...';
     document.getElementById('syncBar').classList.add('show');
     const resp = await fetch(url + '?action=pull');
     const result = await resp.json();
@@ -829,17 +829,17 @@ async function pullFromSheet() {
       data.settings.gasUrl = savedGasUrl;
       saveDataLocal();
       renderAll();
-      document.getElementById('syncBar').textContent = 'åå¾å®äº';
+      document.getElementById('syncBar').textContent = '取得完了';
       setTimeout(() => {
-        document.getElementById('syncBar').textContent = 'åæä¸­...';
+        document.getElementById('syncBar').textContent = '同期中...';
         document.getElementById('syncBar').classList.remove('show');
       }, 1500);
       return;
     }
-    showToast('ãã¼ã¿ãªã');
+    showToast('データなし');
   } catch(e) {
     console.error('pull error:', e);
-    showToast('åæå¤±æ');
+    showToast('同期失敗');
   }
   document.getElementById('syncBar').classList.remove('show');
 }
