@@ -801,7 +801,7 @@ function saveData() {
   try {
     localStorage.setItem('pk_data', JSON.stringify(data));
   } catch(e) { console.error(e); }
-  syncToSheet();
+  if (data.girls.length > 0 || data.appointments.length > 0) syncToSheet();
 }
 
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
@@ -813,7 +813,7 @@ async function syncToSheet() {
   try {
     document.getElementById('syncBar').textContent = '同期中...';
     document.getElementById('syncBar').classList.add('show');
-    const payload = JSON.stringify(data);
+    var syncData = JSON.parse(JSON.stringify(data)); syncData.girls = syncData.girls.map(function(g){ var c = Object.assign({}, g); delete c.photo; return c; }); const payload = JSON.stringify(syncData);
     const chunkSize = 1500;
     const chunks = [];
     for (let i = 0; i < payload.length; i += chunkSize) {
@@ -851,7 +851,7 @@ async function pullFromSheet() {
     const result = await resp.json();
     if (result && result.girls) {
       const savedGasUrl = data.settings.gasUrl;
-      data.girls = result.girls;
+      var localPhotos = {}; data.girls.forEach(function(g){ if(g.photo) localPhotos[g.id] = g.photo; }); data.girls = result.girls.map(function(g){ if(!g.photo && localPhotos[g.id]) g.photo = localPhotos[g.id]; return g; });
       data.appointments = result.appointments;
       if (result.settings) {
         data.settings = result.settings;
