@@ -801,13 +801,13 @@ function saveData() {
   try {
     localStorage.setItem('pk_data', JSON.stringify(data));
   } catch(e) { console.error(e); }
-  if (data.girls.length > 0 || data.appointments.length > 0) syncToSheet();
-}
+  }
 
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 
 // ===== GOOGLE SHEETS SYNC =====
 async function syncToSheet() {
+    if (data.girls.length === 0 && data.appointments.length === 0) return;
   const url = data.settings.gasUrl;
   if (!url) return;
   try {
@@ -861,7 +861,7 @@ async function pullFromSheet() {
     document.getElementById('syncBar').classList.add('show');
     const resp = await fetch(url + '?action=pull');
     const result = await resp.json();
-    if (result && result.girls) {
+    if (result && result.girls && result.girls.length > 0) {
       const savedGasUrl = data.settings.gasUrl;
       var localPhotos = {}; data.girls.forEach(function(g){ if(g.photo) localPhotos[g.id] = g.photo; }); data.girls = result.girls.map(function(g){ if(!g.photo && localPhotos[g.id]) g.photo = localPhotos[g.id]; return g; });
       data.appointments = result.appointments;
