@@ -533,6 +533,8 @@ textarea.form-input { resize: vertical; min-height: 80px; }
   pointer-events: none;
 }
 .toast.show { opacity: 1; }
+.area-tag{display:inline-block;padding:1px 6px;border-radius:8px;font-size:10px;background:var(--bg-card);border:1px solid var(--border);color:var(--text-sub);margin-left:4px}
+.new-badge{display:inline-block;padding:1px 6px;border-radius:8px;font-size:10px;background:#FF6B9D;color:#fff;margin-left:4px;font-weight:700}
 </style>
 </head>
 <body>
@@ -720,6 +722,20 @@ textarea.form-input { resize: vertical; min-height: 80px; }
         <option value="active">アクティブ</option>
         <option value="paused">休止中</option>
         <option value="ended">終了</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>エリア</label>
+      <select class="form-input" id="girlArea">
+        <option value="">未設定</option>
+        <option value="東京">東京</option>
+        <option value="横浜">横浜</option>
+        <option value="名古屋">名古屋</option>
+        <option value="京都">京都</option>
+        <option value="大阪">大阪</option>
+        <option value="広島">広島</option>
+        <option value="福岡">福岡</option>
+        <option value="沖縄">沖縄</option>
       </select>
     </div>
     <div class="form-group">
@@ -972,7 +988,7 @@ function renderCalendar() {
         const opacity = a.status === 'cancelled' ? '0.5' : '1';
         html += `<div class="agenda-appt" style="border-left-color:${borderColor};opacity:${opacity}" onclick="editAppointment('${a.id}')">
           <div class="agenda-appt-time">${a.time || '--:--'}</div>
-          <div class="agenda-appt-name">${girl ? girl.name : '不明'}</div>
+          <div class="agenda-appt-name">${girl ? girl.name : '不明'}${girl && girl.area ? ' <span class="area-tag">' + girl.area + '</span>' : ''}</div>
           <span class="agenda-appt-type" style="background:${type ? type.color : '#999'}">${type ? type.label : a.type}</span>
           ${a.amount ? `<span class="agenda-appt-amount">${formatYen(a.amount)}</span>` : ''}
         </div>`;
@@ -1022,11 +1038,12 @@ function renderGirlsList() {
     const statusMap = { active: ['アクティブ', 'status-active'], paused: ['休止中', 'status-paused'], ended: ['終了', 'status-ended'] };
     const [statusLabel, statusClass] = statusMap[g.status] || ['不明', ''];
     const apptCount = data.appointments.filter(a => a.girlId === g.id && a.status !== 'cancelled').length;
+    const hasMet = data.appointments.some(a => a.girlId === g.id && a.status === 'done');
 
     return `<div class="girl-card" onclick="showProfile('${g.id}')">
       <div class="girl-avatar" style="background:${color}">${g.name.charAt(0)}</div>
       <div class="girl-info">
-        <div class="girl-name">${g.name}</div>
+        <div class="girl-name">${g.name}${!hasMet ? ' <span class="new-badge">NEW</span>' : ''}${g.area ? ' <span class="area-tag">' + g.area + '</span>' : ''}</div>
         <div class="girl-sub">${g.age ? g.age + '歳' : ''} ・ ${apptCount}回</div>
       </div>
       <span class="girl-status ${statusClass}">${statusLabel}</span>
@@ -1047,7 +1064,7 @@ function showProfile(girlId) {
   let html = `
     <div class="profile-header" style="background:linear-gradient(135deg,${color},${color}99)">
       <div class="profile-avatar" style="background:rgba(255,255,255,0.2)">${g.name.charAt(0)}</div>
-      <div class="profile-name">${g.name}</div>
+      <div class="profile-name">${g.name}${g.area ? ' <span class="area-tag" style="font-size:12px">' + g.area + '</span>' : ''}${!data.appointments.some(a => a.girlId === g.id && a.status === \'done\') ? ' <span class="new-badge" style="font-size:11px">NEW</span>' : ''}</div>
       <div style="margin-top:4px;font-size:13px;opacity:0.9">${g.age ? g.age + '歳' : ''}</div>
     </div>
 
@@ -1337,6 +1354,7 @@ function editGirl(id) {
   document.getElementById('girlName').value = g.name;
   document.getElementById('girlAge').value = g.age || '';
   document.getElementById('girlStatus').value = g.status || 'active';
+    document.getElementById('girlArea').value = g.area || '';
   document.getElementById('girlMemo').value = g.memo || '';
   document.getElementById('deleteGirlBtn').style.display = 'block';
   renderAllowanceInputs(g.allowances || {});
@@ -1402,6 +1420,7 @@ function saveGirl() {
     name,
     age: document.getElementById('girlAge').value ? Number(document.getElementById('girlAge').value) : null,
     status: document.getElementById('girlStatus').value,
+      area: document.getElementById('girlArea').value,
     memo: document.getElementById('girlMemo').value,
     allowances,
     customFields,
