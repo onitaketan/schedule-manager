@@ -826,7 +826,19 @@ async function syncToSheet() {
     const resp = await fetch(url + '?action=sync_finalize');
     const result = await resp.json();
     if (result.status === 'ok') {
-      document.getElementById('syncBar').textContent = '同期完了';
+      document.getElementById('syncBar').textContent = '写真同期中...';
+        var photoGirls = data.girls.filter(function(g){ return g.photo; });
+        for (var pi = 0; pi < photoGirls.length; pi++) {
+          var pg = photoGirls[pi];
+          var pChunks = [];
+          for (var pc = 0; pc < pg.photo.length; pc += 1500) { pChunks.push(pg.photo.substring(pc, pc + 1500)); }
+          await fetch(url + '?action=photo_init&id=' + pg.id + '&total=' + pChunks.length);
+          for (var pci = 0; pci < pChunks.length; pci++) {
+            await fetch(url + '?action=photo_chunk&index=' + pci + '&chunk=' + encodeURIComponent(pChunks[pci]));
+          }
+          await fetch(url + '?action=photo_finalize');
+        }
+        document.getElementById('syncBar').textContent = '同期完了';
     } else {
       document.getElementById('syncBar').textContent = '同期失敗';
     }
@@ -859,6 +871,17 @@ async function pullFromSheet() {
       data.settings.gasUrl = savedGasUrl;
       saveDataLocal();
       renderAll();
+      document.getElementById('syncBar').textContent = '写真取得中...';
+      try {
+        var pResp = await fetch(url + '?action=pull_photos');
+        var photos = await pResp.json();
+        if (photos && typeof photos === 'object') {
+          data.girls.forEach(function(g) {
+            if (photos[g.id]) g.photo = photos[g.id];
+          });
+          saveDataLocal();
+        }
+      } catch(pe) { console.error('photo pull error:', pe); }
       document.getElementById('syncBar').textContent = '取得完了';
       setTimeout(() => {
         document.getElementById('syncBar').textContent = '同期中...';
