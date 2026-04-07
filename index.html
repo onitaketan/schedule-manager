@@ -1064,7 +1064,7 @@ function showProfile(girlId) {
   let html = `
     <div class="profile-header" style="background:linear-gradient(135deg,${color},${color}99)">
       <div class="profile-avatar" style="background:rgba(255,255,255,0.2)">${g.name.charAt(0)}</div>
-      <div class="profile-name">${g.name}${g.area ? ' <span class="area-tag" style="font-size:12px">' + g.area + '</span>' : ''}${!data.appointments.some(a => a.girlId === g.id && a.status === \'done\') ? ' <span class="new-badge" style="font-size:11px">NEW</span>' : ''}</div>
+      <div class="profile-name">${g.name}${g.area ? ' <span class="area-tag" style="font-size:12px">' + g.area + '</span>' : ''}${!data.appointments.some(a => a.girlId === g.id && a.status === 'done') ? ' <span class="new-badge" style="font-size:11px">NEW</span>' : ''}</div>
       <div style="margin-top:4px;font-size:13px;opacity:0.9">${g.age ? g.age + '歳' : ''}</div>
     </div>
 
