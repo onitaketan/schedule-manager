@@ -534,7 +534,14 @@ textarea.form-input { resize: vertical; min-height: 80px; }
 }
 .toast.show { opacity: 1; }
 .area-tag{display:inline-block;padding:1px 6px;border-radius:8px;font-size:10px;background:var(--bg-card);border:1px solid var(--border);color:var(--text-sub);margin-left:4px}
-.new-badge{display:inline-block;padding:1px 6px;border-radius:8px;font-size:10px;background:#FF6B9D;color:#fff;margin-left:4px;font-weight:700}
+.new-badge{display:inline-block;padding:1px 6px;border-radius:8px;font-size:10px;background:#FF6B9D;color:#fff;margin-left:4px;font-weight:700;cursor:pointer}
+.girl-avatar-img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+.profile-avatar-img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+.photo-upload-area{text-align:center;margin-bottom:12px}
+.photo-preview{width:80px;height:80px;border-radius:50%;object-fit:cover;margin:0 auto 8px;display:block;border:2px solid var(--border)}
+.photo-upload-btn{display:inline-block;padding:6px 16px;background:var(--primary);color:#fff;border-radius:8px;cursor:pointer;font-size:13px}
+.photo-upload-btn input{display:none}
+.met-badge{display:inline-block;padding:1px 6px;border-radius:8px;font-size:10px;background:var(--success);color:#fff;margin-left:4px;font-weight:700;cursor:pointer}
 </style>
 </head>
 <body>
@@ -707,6 +714,13 @@ textarea.form-input { resize: vertical; min-height: 80px; }
   <div class="modal">
     <div class="modal-handle"></div>
     <h2 id="modalGirlTitle">女の子を追加</h2>
+    <div class="photo-upload-area">
+      <img id="girlPhotoPreview" class="photo-preview" style="display:none">
+      <div id="girlPhotoPlaceholder" style="width:80px;height:80px;border-radius:50%;background:var(--bg);margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--text-sub)">📷</div>
+      <label class="photo-upload-btn">📷 写真を選択<input type="file" accept="image/*" onchange="handlePhotoUpload(event)"></label>
+      <div style="margin-top:4px"><button type="button" style="background:none;border:none;color:var(--danger);font-size:11px;cursor:pointer" onclick="removePhoto()">写真を削除</button></div>
+    </div>
+
     <input type="hidden" id="girlId">
     <div class="form-group">
       <label>名前</label>
@@ -1038,12 +1052,12 @@ function renderGirlsList() {
     const statusMap = { active: ['アクティブ', 'status-active'], paused: ['休止中', 'status-paused'], ended: ['終了', 'status-ended'] };
     const [statusLabel, statusClass] = statusMap[g.status] || ['不明', ''];
     const apptCount = data.appointments.filter(a => a.girlId === g.id && a.status !== 'cancelled').length;
-    const hasMet = data.appointments.some(a => a.girlId === g.id && a.status === 'done');
+    const hasMet = g.metBefore || data.appointments.some(a => a.girlId === g.id && a.status === 'done');
 
     return `<div class="girl-card" onclick="showProfile('${g.id}')">
-      <div class="girl-avatar" style="background:${color}">${g.name.charAt(0)}</div>
+      <div class="girl-avatar" style="background:${color}">${g.photo ? '<img class="girl-avatar-img" src="' + g.photo + '">' : g.name.charAt(0)}</div>
       <div class="girl-info">
-        <div class="girl-name">${g.name}${!hasMet ? ' <span class="new-badge">NEW</span>' : ''}${g.area ? ' <span class="area-tag">' + g.area + '</span>' : ''}</div>
+        <div class="girl-name">${g.name}${!hasMet ? ' <span class="new-badge" onclick="toggleMet(\'' + g.id + '\', event)">NEW</span>' : ' <span class="met-badge" onclick="toggleMet(\'' + g.id + '\', event)">✔</span>'}${g.area ? ' <span class="area-tag">' + g.area + '</span>' : ''}</div>
         <div class="girl-sub">${g.age ? g.age + '歳' : ''} ・ ${apptCount}回</div>
       </div>
       <span class="girl-status ${statusClass}">${statusLabel}</span>
@@ -1063,8 +1077,8 @@ function showProfile(girlId) {
 
   let html = `
     <div class="profile-header" style="background:linear-gradient(135deg,${color},${color}99)">
-      <div class="profile-avatar" style="background:rgba(255,255,255,0.2)">${g.name.charAt(0)}</div>
-      <div class="profile-name">${g.name}${g.area ? ' <span class="area-tag" style="font-size:12px">' + g.area + '</span>' : ''}${!data.appointments.some(a => a.girlId === g.id && a.status === 'done') ? ' <span class="new-badge" style="font-size:11px">NEW</span>' : ''}</div>
+      <div class="profile-avatar" style="background:rgba(255,255,255,0.2)">${g.photo ? '<img class="profile-avatar-img" src="' + g.photo + '">' : g.name.charAt(0)}</div>
+      <div class="profile-name">${g.name}${g.area ? ' <span class="area-tag" style="font-size:12px">' + g.area + '</span>' : ''}${!(g.metBefore || data.appointments.some(a => a.girlId === g.id && a.status === 'done')) ? ' <span class="new-badge" style="font-size:11px" onclick="toggleMet(\'' + g.id + '\', event)">NEW</span>' : (g.metBefore ? ' <span class="met-badge" style="font-size:11px" onclick="toggleMet(\'' + g.id + '\', event)">✔</span>' : '')}</div>
       <div style="margin-top:4px;font-size:13px;opacity:0.9">${g.age ? g.age + '歳' : ''}</div>
     </div>
 
@@ -1335,6 +1349,9 @@ function deleteAppointment() {
 // -- Girl Modal --
 function openAddGirl() {
   document.getElementById('modalGirlTitle').textContent = '女の子を追加';
+    window._tempPhoto = '';
+    document.getElementById('girlPhotoPreview').style.display = 'none';
+    document.getElementById('girlPhotoPlaceholder').style.display = 'flex';
   document.getElementById('girlId').value = '';
   document.getElementById('girlName').value = '';
   document.getElementById('girlAge').value = '';
@@ -1355,6 +1372,15 @@ function editGirl(id) {
   document.getElementById('girlAge').value = g.age || '';
   document.getElementById('girlStatus').value = g.status || 'active';
     document.getElementById('girlArea').value = g.area || '';
+    window._tempPhoto = g.photo || '';
+    if (g.photo) {
+      document.getElementById('girlPhotoPreview').src = g.photo;
+      document.getElementById('girlPhotoPreview').style.display = 'block';
+      document.getElementById('girlPhotoPlaceholder').style.display = 'none';
+    } else {
+      document.getElementById('girlPhotoPreview').style.display = 'none';
+      document.getElementById('girlPhotoPlaceholder').style.display = 'flex';
+    }
   document.getElementById('girlMemo').value = g.memo || '';
   document.getElementById('deleteGirlBtn').style.display = 'block';
   renderAllowanceInputs(g.allowances || {});
@@ -1421,6 +1447,7 @@ function saveGirl() {
     age: document.getElementById('girlAge').value ? Number(document.getElementById('girlAge').value) : null,
     status: document.getElementById('girlStatus').value,
       area: document.getElementById('girlArea').value,
+      photo: window._tempPhoto !== undefined ? window._tempPhoto : '',
     memo: document.getElementById('girlMemo').value,
     allowances,
     customFields,
@@ -1430,6 +1457,7 @@ function saveGirl() {
   const idx = data.girls.findIndex(g => g.id === girl.id);
   if (idx >= 0) {
     girl.createdAt = data.girls[idx].createdAt;
+      if (!girl.photo) girl.photo = data.girls[idx].photo || '';
     data.girls[idx] = girl;
   } else {
     data.appointments.push(); // noop
@@ -1441,6 +1469,49 @@ function saveGirl() {
   renderGirlsList();
   if (currentGirlId === girl.id) showProfile(girl.id);
   showToast('保存しました');
+}
+
+
+function toggleMet(girlId, evt) {
+  if (evt) evt.stopPropagation();
+  const g = data.girls.find(x => x.id === girlId);
+  if (!g) return;
+  g.metBefore = !g.metBefore;
+  saveData();
+  renderGirlsList();
+  if (currentGirlId === girlId) showProfile(girlId);
+}
+
+function handlePhotoUpload(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    var img = new Image();
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      var size = 200;
+      canvas.width = size;
+      canvas.height = size;
+      var ctx = canvas.getContext('2d');
+      var min = Math.min(img.width, img.height);
+      var sx = (img.width - min) / 2;
+      var sy = (img.height - min) / 2;
+      ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size);
+      window._tempPhoto = canvas.toDataURL('image/jpeg', 0.7);
+      document.getElementById('girlPhotoPreview').src = window._tempPhoto;
+      document.getElementById('girlPhotoPreview').style.display = 'block';
+      document.getElementById('girlPhotoPlaceholder').style.display = 'none';
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function removePhoto() {
+  window._tempPhoto = '';
+  document.getElementById('girlPhotoPreview').style.display = 'none';
+  document.getElementById('girlPhotoPlaceholder').style.display = 'flex';
 }
 
 function deleteGirl() {
